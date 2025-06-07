@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>Firebase:v9:Chatアプリ</title>
+</head>
+<body>
+
+<!-- コンテンツ表示画面 -->
+
+<div>
+    <div> 名前：<input type="text" id="uname"> </div>
+    <div>
+        <textarea id="text" cols="30" rows="10"></textarea>
+        <button id="send">送信</button>
+    </div>
+    <div id="output" sytle="ovewrflow: auto; height: 300px;"></div>
+</div>
+<!--/ コンテンツ表示画面 -->
+
+
+
+<!-- JQuery -->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<!-- JQuery -->
+
+
+<!--** 以下Firebase **-->
+<script type="module">
+    // Import the functions you need from the SDKs you need
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+    import { getDatabase, ref, push, set, onChildAdded, remove, onChildRemoved } 
+    from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+
+    // TODO: Add SDKs for Firebase products that you want to use
+    // https://firebase.google.com/docs/web/setup#available-libraries
+  
+    // Your web app's Firebase configuration
+    // Githubに上げない！！！！
+    const firebaseConfig = {
+      apiKey: "AIzaSyD0tJwvIj54KjA1TudGtZI_WtViTssuznc",
+      authDomain: "test01-9c692.firebaseapp.com",
+      projectId: "test01-9c692",
+      storageBucket: "test01-9c692.firebasestorage.app",
+      messagingSenderId: "583376689331",
+      appId: "1:583376689331:web:f7ca2173d5ad1a44c1f8c6"
+    };
+
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const db  = getDatabase(app);
+    const dbRef = ref(db, "chat");
+
+//送信イベント
+    $("#send").on("click",function(){
+        alert("aaa");
+    const msg = {
+        uname : $("#uname").val(),
+        text  : $("#text").val()
+    };
+    const newPostRef = push(dbRef); //UNIQUE_ID//重複しないKEY
+    set(newPostRef, msg); //set(key,value);
+});
+//Enterキー
+$("#text").on("keydown",function(e){
+    if(e.keyCode==13){ //Enter13
+        const msg = {
+            uname : $("#uname").val(),
+            text  : $("#text").val()
+        };
+        const newPostRef = push(dbRef); //UNIQUE_ID//重複しないKEY
+        set(newPostRef, msg); //set(key,value);
+    }
+});
+
+
+//受信イベント(データ個数分自動でループします)
+onChildAdded(dbRef, function(data){
+    const msg = data.val();//データ取得とオブジェクトに変換
+    const key = data.key;  //UNIQUE_KEYを取得（更新・削除用）
+    let h = '<p>';
+        h += msg.uname;
+        h += '<br>';
+        h += msg.text;
+        h += '</p>';
+    $("#output").append(h);//id=outputの一番下に差し込みます
+    $("#output")[0].scrollTop = $("#output")[0].scrollHeight; // スクロールを最下部に
+
+})
+  </script>
+
+
+
+
+
+
+
+
+
+
+
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

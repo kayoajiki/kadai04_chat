@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>パーソナルデイ占いチャット</title>
+  <link rel="stylesheet" href="style.css"> <!-- ← CSSを読み込み -->
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<h2>🔮 パーソナルデイ占いチャット</h2>
+<p class="intro">あなたの生年月日と占いたい日付から、<strong>あなただけの運勢</strong>を導きます。</p>
+
+<div>
+  <label>ニックネーム: <input type="text" id="uname"></label><br>
+
+  <label>生年月日:
+    <select id="birth_year"></select>年
+    <select id="birth_month"></select>月
+    <select id="birth_day"></select>日
+  </label><br>
+
+  <label>占いたい日: <input type="date" id="target"></label><br>
+  <button id="send">占う</button>
+</div>
+
+<div id="output"></div>
+
+<!-- Firebase & jQuery -->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+  import { getDatabase, ref, push, set, onChildAdded, remove } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+
+  const firebaseConfig = {
+    // 🔒 ご自身のFirebase設定に差し替えてください！
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+    databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_PROJECT_ID.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const dbRef = ref(db, "personal_day_chat");
+
+  // 生年月日セレクト初期化
+  const yearSel = document.getElementById("birth_year");
+  const monthSel = document.getElementById("birth_month");
+  const daySel = document.getElementById("birth_day");
+
+  for (let y = 1920; y <= new Date().getFullYear(); y++) {
+    const opt = document.createElement("option");
+    opt.value = y;
+    opt.text = y;
+    yearSel.appendChild(opt);
+  }
+  for (let m = 1; m <= 12; m++) {
+    const opt = document.createElement("option");
+    opt.value = m.toString().padStart(2, '0');
+    opt.text = m;
+    monthSel.appendChild(opt);
+  }
+  for (let d = 1; d <= 31; d++) {
+    const opt = document.createElement("option");
+    opt.value = d.toString().padStart(2, '0');
+    opt.text = d;
+    daySel.appendChild(opt);
+  }
+
+  // 占い送信
+  $("#send").on("click", function () {
+    const uname = $("#uname").val();
+    const year = $("#birth_year").val();
+    const month = $("#birth_month").val();
+    const day = $("#birth_day").val();
+    const target = $("#target").val();
+
+    if (!uname || !year || !month || !day || !target) {
+      alert("すべての項目を入力してください");
+      return;
+    }
+
+    const birth = `${year}-${month}-${day}`;
+    const number = getPersonalDayNumber(birth, target);
+    const result = getFortuneMessage(number);
+
+    const msg = {
+      uname,
+      birth,
+      target,
+      number,
+      result,
+      created_at: new Date().toLocaleString()
+    };
+
+    const newPostRef = push(dbRef);
+    set(newPostRef, msg);
+  });
+
+  // 表示処理
+  onChildAdded(dbRef, function (data) {
+    const msg = data.val();
+    const key = data.key;
+    let html = `<div class="message" id="${key}">
+      <strong>👤 ${msg.uname}</strong>（${msg.birth}生まれ）<br>
+      📅 占った日: ${msg.target}<br>
+      🔢 パーソナルデイNo.: ${msg.number}<br>
+      💬 ${msg.result}<br>
+      🕓 ${msg.created_at}<br>
+      <span class="delete-btn" onclick="deleteMessage('${key}')">[削除]</span>
+    </div>`;
+    $("#output").append(html);
+    $("#output").scrollTop($("#output")[0].scrollHeight);
+  });
+
+  window.deleteMessage = function (key) {
+    remove(ref(db, "personal_day_chat/" + key));
+    $("#" + key).remove();
+  }
+
+  function getPersonalDayNumber(birthStr, targetStr) {
+    const birth = new Date(birthStr);
+    const target = new Date(targetStr);
+    const birthSum = sumDigits(birth.getFullYear()) + sumDigits(birth.getMonth() + 1) + sumDigits(birth.getDate());
+    const targetSum = sumDigits(target.getFullYear()) + sumDigits(target.getMonth() + 1) + sumDigits(target.getDate());
+    let total = birthSum + targetSum;
+    while (total > 9) total = sumDigits(total);
+    return total;
+  }
+
+  function sumDigits(num) {
+    return num.toString().split("").reduce((acc, d) => acc + parseInt(d), 0);
+  }
+
+  function getFortuneMessage(num) {
+    const messages = {
+      1: "今日は新たな挑戦にぴったりの日。自分から一歩踏み出してみて！",
+      2: "人との関わりがカギ。思いやりと協力を意識して過ごそう。",
+      3: "創造力と発信力が光る日。楽しいことに目を向けて◎",
+      4: "コツコツ積み上げる力が試される日。地道な努力が吉！",
+      5: "変化の流れが強い一日。柔軟に動いて風に乗ろう。",
+      6: "家庭や仲間との時間を大切に。優しさが運を呼びます。",
+      7: "内省に向いた日。静かな時間があなたに気づきをもたらします。",
+      8: "成果を意識すると良い日。お金や仕事運に動きがありそう。",
+      9: "手放しと癒しのタイミング。過去を振り返ることで前に進めます。"
+    };
+    return messages[num] || "今日はバランスの取れた穏やかな日です。";
+  }
+
+  const today = new Date().toISOString().split("T")[0];
+  document.getElementById("target").value = today;
+</script>
+
+</body>
+</html>
